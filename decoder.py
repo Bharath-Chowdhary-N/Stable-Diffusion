@@ -2,7 +2,7 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 import math
-
+from attention import SelfAttention
 class decoder():
     def __init__(self):
         pass
@@ -27,14 +27,23 @@ class VAE_resiudal_block(nn.Module):
     
     def forward(self, x):
         x_input = x
-        
+
         x = self.group_norm_1(x)
+        x = F.silu(x)
         x = self.conv_1(x)
 
         x = self.group_norm_2(x)
+        x = F.silu(x)
         x = self.conv_2(x)
 
         x = x + self.residual_layer(x_input)
 
         return x 
+
+class VAE_attention(nn.Module):
+    def __init__(self, out_channel):
+        super().__init__()
+        self.group_norm_1 = nn.GroupNorm(self.num_groups, out_channel)
+        self.self_attention = SelfAttention()
+
 

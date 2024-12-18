@@ -45,4 +45,12 @@ class SelfAttention():
 
         qk_product = F.softmax(qk_product, dim=-1)
 
-        attention_qkv = qk_product @ v_dash 
+        attention_qkv = qk_product @ v_dash #(batch_size, self.n_heads, seq, self.d_k)
+
+        attention_qkv = attention_qkv.transpose(1,2) #batch_size, seq, self.n_heads, self.d_k
+
+        attention_qkv = attention_qkv.reshape(x.shape) #back to (batchsize, seq, d_model), 
+
+        output =self.W_output(attention_qkv)
+
+        return output 

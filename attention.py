@@ -12,7 +12,7 @@ class SelfAttention():
     W_output = (d_model, d_model) #W_output --> output weights for projection
     d_k = d_model / h # as represented in paper, for splitting the Q,K,V into smaller tensors
     """
-    def __init__(self, d_model: int, n_heads: int):
+    def __init__(self, n_heads: int, d_model: int):
         self.d_model = d_model
         self.W_input = nn.Linear(self.d_model, 3*self.d_model)
         self.W_output = nn.Linear(self.d_model, self.d_model)

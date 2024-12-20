@@ -3,9 +3,46 @@ from torch import nn
 from torch.nn import functional as F
 import math
 from attention import SelfAttention
-class decoder():
+class VAE_decoder(nn.Sequential):
     def __init__(self):
-        pass
+        super().__init__(
+            nn.Conv2d(4,4, kernel_size=1, padding=0), # does not change size
+            nn.Conv2d(4, 512, kernel_size=3, padding=1),#does not change size, but increase filters
+            VAE_residual_block(512, 512),
+            VAE_attention(512),
+            VAE_residual_block(512, 512),
+            VAE_residual_block(512, 512),
+            VAE_residual_block(512, 512),
+            VAE_residual_block(512, 512), #(Batchsize, 512, H/8, W/8)
+            
+            nn.Upsample(scale_factor=2),  #(Batchsize, 512, H/4, W/4)
+            nn.Conv2d(512, 512, kernel_size=3, padding=1), # does not chnage size
+            VAE_residual_block(512, 512),
+            VAE_residual_block(512, 512),
+            VAE_residual_block(512, 512), #(Batchsize, 512, H/4, W/4)
+ 
+            nn.Upsample(scale_factor=2),  #(Batchsize, 512, H/2, W/2)
+            nn.Conv2d(512, 512, kernel_size=3, padding=1), # does not chnage size
+            VAE_residual_block(512, 256),
+            VAE_residual_block(256, 256),
+            VAE_residual_block(256, 256), #(Batchsize, 256, H/2, W/2)
+
+            nn.Upsample(scale_factor=2),  #(Batchsize, 256, H, W)
+            nn.Conv2d(256, 256, kernel_size=3, padding=1), # does not chnage size
+            VAE_residual_block(256, 128),
+            VAE_residual_block(128, 128),
+            VAE_residual_block(128, 128), #(Batchsize, 128, H, W)
+ 
+            nn.GroupNorm(32,128),
+            nn.SiLU(),
+            nn.Conv2d(128,3, kernel_size=3, padding=1) #chnage back the channels to 3
+        )
+        def forward(self, x:torch.tensor):
+            x /= 0.18215 #rescale back the cosntant we used in encoder 
+            for module in self:
+                x = module(x)
+            return x
+
 
 class VAE_residual_block(nn.Module):
     def __init__(self, in_channel, out_channel):

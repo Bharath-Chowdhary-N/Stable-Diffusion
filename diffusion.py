@@ -16,5 +16,7 @@ class time_embedding(nn.Module):
     def forward(self, x:torch.tensor) -> torch.tensor:
         x = self.linear_layer_1(x)
         x = F.Silu(x)
-        x=self.linear_layer_2(x)
+        x=self.linear_layer_2(x) #input x: [1, num_embded] output x: [1, 4*num_embed]
         return x
+
+

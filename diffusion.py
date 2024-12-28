@@ -19,6 +19,15 @@ class time_embedding(nn.Module):
         x=self.linear_layer_2(x) #input x: [1, num_embded] output x: [1, 4*num_embed]
         return x
 
+class Upsample(nn.Module):
+    def __init__(self, channels):
+        self.conv_layer = nn.Conv2d(channels, channels, kernel_size=3, padding=1)
+    def forward(self, x):
+        x = F.interpolate(x, scale_factor=2, mode="nearest")
+        x = self.conv_layer(x)
+        return x
+
+
 class UNET_residual_block(nn.Module):
     def __init__(self, in_channel, out_channel, num_time_embed):
         super().__init__()

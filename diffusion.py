@@ -27,6 +27,18 @@ class Upsample(nn.Module):
         x = self.conv_layer(x)
         return x
 
+class UNET_output(nn.Module):
+    def __init__(self, in_channel, out_channel=4):
+        self.conv_layer = nn.Conv2d(in_channels=in_channel, out_channels=out_channel, kernel_size=3, padding=1)
+        self.group_norm = nn.GroupNorm(32, in_channel)
+    def forward(self, x):
+        # x shape: (batch_size, 320, h/8, w/8)
+        x = self.group_norm(x)
+        x = F.Silu(x)
+        x = self.conv_layer(x) # converted to (batch_size, 4, h/8, w/8)
+
+        return x
+
 class Diffusion(nn.Module):
     def __init_(self, op_layer_inp=320,  op_layer_op=4, num_embed=320):
         

@@ -27,6 +27,27 @@ class Upsample(nn.Module):
         x = self.conv_layer(x)
         return x
 
+class Diffusion(nn.Module):
+    def __init_(self, op_layer_inp=320,  op_layer_op=4, num_embed=320):
+        
+        self.time_embedding = time_embedding(num_embed)
+
+        self.Unet_instance = UNET()
+
+        self.Unet_output = UNET_output(op_layer_inp,op_layer_op)
+
+    def forward(self, latent_vec, time_embed, text_prompt):
+        
+        time_embed = self.time_embedding(time_embed) #shape: [1, 320] --> [1,1280]
+
+        #from encoder (Batchsize, 4, h/8, w/8)  --> (Batchsize, 320, h/8, w/8)
+        unet_output = self.Unet_instance(latent_vec, time_embed, text_prompt)
+        
+        #back again (Batchsize, 320, h/8, w/8)  --> (Batchsize, 4, h/8, w/8)
+        final_ouput = self.Unet_output(unet_output)
+
+        return final_ouput 
+        
 
 class UNET_residual_block(nn.Module):
     def __init__(self, in_channel, out_channel, num_time_embed):

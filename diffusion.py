@@ -2,10 +2,6 @@ import torch
 from torch import nn
 from torch.nn import Functional as F
 
-class Diffusion(nn.Module):
-    def __init__(self):
-        super().__init__()
-        pass
 
 class time_embedding(nn.Module):
     def __init__(self, num_embed):
@@ -21,6 +17,7 @@ class time_embedding(nn.Module):
 
 class Upsample(nn.Module):
     def __init__(self, channels):
+        super().__init__()
         self.conv_layer = nn.Conv2d(channels, channels, kernel_size=3, padding=1)
     def forward(self, x):
         x = F.interpolate(x, scale_factor=2, mode="nearest")
@@ -29,6 +26,7 @@ class Upsample(nn.Module):
 
 class UNET_output(nn.Module):
     def __init__(self, in_channel, out_channel=4):
+        super().__init__()
         self.conv_layer = nn.Conv2d(in_channels=in_channel, out_channels=out_channel, kernel_size=3, padding=1)
         self.group_norm = nn.GroupNorm(32, in_channel)
     def forward(self, x):
@@ -41,7 +39,7 @@ class UNET_output(nn.Module):
 
 class Diffusion(nn.Module):
     def __init_(self, op_layer_inp=320,  op_layer_op=4, num_embed=320):
-        
+        super().__init__()
         self.time_embedding = time_embedding(num_embed)
 
         self.Unet_instance = UNET()
@@ -97,7 +95,11 @@ class UNET_residual_block(nn.Module):
         return x + self.residual_layer(residue)
 
 
-
+class UNET_attention_block(nn.Module):
+    def __init__(self):
+        super().__init__()
+    def forward(self, x):
+        return None
 
 
 

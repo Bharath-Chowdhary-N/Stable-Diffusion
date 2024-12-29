@@ -43,7 +43,7 @@ class VAE_encoder(nn.Sequential):
         #x Input shape: (Batch_size, Channel, H, W) 
         #Noise: same as output shape of inititalization (Batchsize, Channel, H/8, W/8)
         for module in self:
-            if getattr(module, stride, None) == (2,2):
+            if getattr(module, 'stride', None) == (2,2):
                x = F.pad(x, (0,1,0,1))
             x = module(x)
         

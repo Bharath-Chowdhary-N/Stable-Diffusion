@@ -12,10 +12,10 @@ class SelfAttention(nn.Module):
     W_output = (d_model, d_model) #W_output --> output weights for projection
     d_k = d_model / h # as represented in paper, for splitting the Q,K,V into smaller tensors
     """
-    def __init__(self, n_heads: int, d_model: int):
+    def __init__(self, n_heads: int, d_model: int, in_bias=True, out_bias=True):
         self.d_model = d_model
-        self.W_input = nn.Linear(self.d_model, 3*self.d_model)
-        self.W_output = nn.Linear(self.d_model, self.d_model)
+        self.W_input = nn.Linear(self.d_model, 3*self.d_model, bias=in_bias)
+        self.W_output = nn.Linear(self.d_model, self.d_model, bias=out_bias)
         self.n_heads = n_heads
         self.d_k = self.d_model / self.n_heads
         assert isinstance(self.d_k, int)
@@ -56,14 +56,14 @@ class SelfAttention(nn.Module):
         return output 
 
 class CrossAttention(nn.Module):
-    def __init__(self, n_heads:int, d_model:int, d_cross:int):
+    def __init__(self, n_heads:int, d_model:int, d_cross:int, in_bias=True, out_bias=True):
         self.n_heads = n_heads
         self.d_model = d_model
         self.d_cross = d_cross
-        self.W_input_q = nn.Linear(d_model, d_model)
-        self.W_input_k = nn.Linear(d_cross, d_model)
-        self.W_input_v = nn.Linear(d_cross, d_model)
-        self.W_output  = nn.Linear(d_model, d_model) 
+        self.W_input_q = nn.Linear(d_model, d_model, bias=in_bias)
+        self.W_input_k = nn.Linear(d_cross, d_model, bias= in_bias)
+        self.W_input_v = nn.Linear(d_cross, d_model, bias=in_bias)
+        self.W_output  = nn.Linear(d_model, d_model, bias=out_bias) 
         self.d_k = self.d_model/self.n_heads
 
         assert isinstance(self.d_k, int)

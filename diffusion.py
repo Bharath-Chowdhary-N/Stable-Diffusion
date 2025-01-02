@@ -70,8 +70,40 @@ class UNET(nn.Module):
         ])
 
         self.decoders = nn.ModuleList([
-            
+            # (Batchsize, 2560, Height/64, Width/64)  --> (Batchsize, 1280, Height/64, Width/64)
+            Switch_Sequential(UNET_residual_block(2560,1280)),
+            Switch_Sequential(UNET_residual_block(2560,1280)),
+              
+            # (Batchsize, 1280, Height/64, Width/64)  --> (Batchsize, 1280, Height/32, Width/32) 
+            Switch_Sequential(UNET_residual_block(2560,1280), Upsample(1280)),
+            Switch_Sequential(UNET_residual_block(2560,1280), UNet_attention_block(8, 160)),
+            Switch_Sequential(UNET_residual_block(2560,1280), UNet_attention_block(8, 160)),
+
+            # (Batchsize, 1280, Height/32, Width/32)  --> (Batchsize, 640, Height/16, Width/16) 
+            Switch_Sequential(UNET_residual_block(1920,640), UNet_attention_block(8, 80), Upsample(640)),
+            Switch_Sequential(UNET_residual_block(1280,640), UNet_attention_block(8, 80)),
+            Switch_Sequential(UNET_residual_block(1280,640), UNet_attention_block(8, 80)),
+
+            # (Batchsize, 640, Height/16, Width/16)  --> (Batchsize, 320, Height/8, Width/8) 
+            Switch_Sequential(UNET_residual_block(960,320), UNet_attention_block(8, 40), Upsample(320)),
+            Switch_Sequential(UNET_residual_block(640,320), UNet_attention_block(8, 40)),
+            Switch_Sequential(UNET_residual_block(640,320), UNet_attention_block(8, 40)),
         ])
+    def forward(self, x, context, time):
+
+        skip_connections = []
+
+        for layers in self.encoders:
+            x = layers(x, context, time)
+            skip_connections.append(x)
+        
+        x = self.bottle_neck(x, context, time)
+
+        for layers in self.decoders:
+            x = torch.cat(x, skip_connections.pop(), dim=1)
+            x = layers(x, context, time)
+        
+        return x
 
 class UNet_attention_block(nn.Module):
     def __init__(self, n_heads, n_embed, d_context=768):

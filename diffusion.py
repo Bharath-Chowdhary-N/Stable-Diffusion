@@ -127,7 +127,20 @@ class Diffusion(nn.Module):
         final_ouput = self.Unet_output(unet_output)
 
         return final_ouput 
-        
+
+
+class Switch_Sequential(nn.Sequential):
+    def __init__(self):
+        super().__init__() 
+    def forward(self, x, context, time):
+        for layer in self:
+            if isinstance(layer, UNet_attention_block):
+                x = layer(x, context)
+            elif isinstance(layer, UNET_residual_block):
+                x = layer(x, time)
+            else:
+                x = layer(x)
+        return x
 
 class UNET_residual_block(nn.Module):
     def __init__(self, in_channel, out_channel, num_time_embed):
@@ -165,11 +178,6 @@ class UNET_residual_block(nn.Module):
         return x + self.residual_layer(residue)
 
 
-class UNET_attention_block(nn.Module):
-    def __init__(self):
-        super().__init__()
-    def forward(self, x):
-        return None
 
 
 

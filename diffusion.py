@@ -37,6 +37,42 @@ class UNET_output(nn.Module):
 
         return x
 
+class UNET(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+        self.encoders = nn.ModuleList([  
+            # (Batch_size, 4, Height/8, Width/8) --> (Batch_size, 320, Height/8, Width/8)
+            Switch_Sequential(nn.Conv2d(4,320,kernel_size=3, padding=1)),
+            Switch_Sequential(UNET_residual_block(320,320), UNet_attention_block(8, 40)), # in attention block num_heads= 8 here, 8*40 = 320
+            Switch_Sequential(UNET_residual_block(320,320), UNet_attention_block(8, 40)),
+
+            # (Batch_size, 320, Height/8, Width/8) --> (Batch_size, 640, Height/16, Width/16)
+            Switch_Sequential(nn.Conv2d(320,640,kernel_size=3, padding=1, stride=2)),
+            Switch_Sequential(UNET_residual_block(640,640), UNet_attention_block(8, 80)),
+            Switch_Sequential(UNET_residual_block(640,640), UNet_attention_block(8, 80)),
+
+            # (Batch_size, 640, Height/16, Width/16) --> (Batch_size, 1280, Height/32, Width/32)
+            Switch_Sequential(nn.Conv2d(640,1280,kernel_size=3, padding=1, stride=2)),
+            Switch_Sequential(UNET_residual_block(1280,1280), UNet_attention_block(8, 80)),
+            Switch_Sequential(UNET_residual_block(1280,1280), UNet_attention_block(8, 80)),
+
+            # (Batch_size, 1280, Height/32, Width/32) --> (Batch_size, 1280, Height/64, Width/64)
+            Switch_Sequential(nn.Conv2d(1280,1280,kernel_size=3, padding=1, stride=2)),
+            Switch_Sequential(UNET_residual_block(1280,1280)),
+            Switch_Sequential(UNET_residual_block(1280,1280))         
+        ])
+
+        self.bottle_neck = nn.ModuleList([
+            Switch_Sequential(UNET_residual_block(1280,1280)),
+            Switch_Sequential(UNet_attention_block(8,80)),
+            Switch_Sequential(UNET_residual_block(1280,1280))
+        ])
+
+        self.decoders = nn.ModuleList([
+            
+        ])
+
 class UNet_attention_block(nn.Module):
     def __init__(self, n_heads, n_embed, d_context=768):
         super().__init__()
@@ -141,6 +177,8 @@ class Switch_Sequential(nn.Sequential):
             else:
                 x = layer(x)
         return x
+
+
 
 class UNET_residual_block(nn.Module):
     def __init__(self, in_channel, out_channel, num_time_embed):

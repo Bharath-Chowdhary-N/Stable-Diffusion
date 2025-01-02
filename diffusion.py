@@ -37,6 +37,76 @@ class UNET_output(nn.Module):
 
         return x
 
+class UNet_attention_block(nn.Module):
+    def __init__(self, n_heads, n_embed, d_context=768):
+        super().__init__()
+        channels = n_heads*n_embed  # here n_embed can litteraly translate to width of k', q' and v' in attention
+
+        self.groupnorm = nn.GroupNorm(32, channels)
+        self.conv_layer_1 = nn.Conv2d(in_channels=channels, out_channels=channels, kernel_size=1, padding=0)
+
+        self.layernorm_1    = nn.LayerNorm(channels)
+        self.self_attention = SelfAttention(n_heads=n_heads, d_model=channels)
+
+        self.layernorm_2    = nn.LayerNorm(channels)
+        self.cross_attention = CrossAttention(n_heads=n_heads, d_model=channels, d_cross=d_context) #d_context is for text used for query and value vectors
+
+        self.layernorm_3    = nn.LayerNorm(channels)
+        
+        self.linear_layer_1 = nn.Linear(channels,8*channels)
+        self.linear_layer_2 = nn.Linear(4*channels, channels)
+
+        self.conv_layer_2 = nn.Conv2d()
+    
+    def forward(self, x, context):
+        
+        residue_start = x
+
+        x = self.groupnorm(x)
+        x = self.conv_layer_1(x)
+
+         
+        n, c, h, w = x.shape
+        
+        x  = x.view(n,c,h*w)
+        x  = x.transpose(-1,-2) #shape becomes (n, h*w, c)
+        residue_mid = x
+
+        x = self.layernorm_1(x)
+        x = self.self_attention(x)
+        x += residue_mid
+
+        residue_mid = x
+
+        x = self.layernorm_2(x)
+        x = self.cross_attention(x, context)
+        x += residue_mid
+
+        residue_mid = x
+
+        x = self.layernorm_3(x)
+        x, interim = self.linear_layer_1(x).chunk(2,dim=-1) #interim will have  4*channels
+        x = x*F.gelu(interim) # x will have 4 channels
+        x = self.linear_layer_2(x) #will make it back to 1*channels 
+        x += residue_mid
+
+        x = x.transpose(-1,-2)
+        x = x.view(n, c, h, w)
+
+        x = self.conv_layer_2(x) + residue_start
+
+        return x
+
+
+
+
+
+
+
+
+
+   
+
 class Diffusion(nn.Module):
     def __init_(self, op_layer_inp=320,  op_layer_op=4, num_embed=320):
         super().__init__()

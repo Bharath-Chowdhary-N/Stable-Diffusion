@@ -17,7 +17,7 @@ class SelfAttention(nn.Module):
         self.W_input = nn.Linear(self.d_model, 3*self.d_model, bias=in_bias)
         self.W_output = nn.Linear(self.d_model, self.d_model, bias=out_bias)
         self.n_heads = n_heads
-        self.d_k = self.d_model / self.n_heads
+        self.d_k = self.d_model // self.n_heads
         assert isinstance(self.d_k, int)
     def forward(self, x: torch.tensor, causal_mask: bool):
         """

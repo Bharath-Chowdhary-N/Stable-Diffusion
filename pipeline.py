@@ -114,6 +114,9 @@ def generate(prompt: str, neg_prompt: str, input_image=None, strength=0.9, do_cf
         else:
             latents = torch.randn(latent_shape, generator=generator, device=device) # here sampler is not needed
         
+        diffusion = models["diffusion"]
+        diffusion.to(device)
+
 
 
 def custom_rescale(input, prev_lim, new_lim):
@@ -132,10 +135,16 @@ def custom_rescale(input, prev_lim, new_lim):
     return norm_input
 
         
+def get_time_embedding(timestep, dim=160):
+    #(160,)
+    frequency = torch.pow(10000,-torch.arange(start=0,end=dim, dtype=torch.float32)/dim)
 
+    embedding = timestep*frequency
 
+    embedding = torch.cat([torch.cos(embedding), torch.sin(embedding)])
+
+    shape (1, 2*dim)
+    return embedding.unsqueeze(0) 
 
              
     
-
-    return None

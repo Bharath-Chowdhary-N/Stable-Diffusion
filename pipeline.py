@@ -5,11 +5,14 @@
 import torch
 import numpy as np
 import tqdm as tqdm
+from encoder import VAE_encoder
+
 
 W = 512 #Height
 H = 512 #Width
 Latent_h = W // 8 # check the encoder, they take input and the output is h/8, w/8
 Latent_w = H // 8
+num_latent_channels = 4
 
 def generate(prompt: str, neg_prompt: str, input_image=None, strength=0.9, do_cfg=True, cfg_scale=8, sampler_name="DDPM", 
              n_interference=50, models={}, seed=None, device=None, idle_device=None, tokenizer=None):
@@ -79,8 +82,54 @@ def generate(prompt: str, neg_prompt: str, input_image=None, strength=0.9, do_cf
         
         to_idle(clip)
 
+        if sampler_name == "DDPM":
+            sampler = DDPM_sampler(generator)
+            sampler.set_inference_steps(n_interference)
+        else:
+            raise ValueError("Sampler not set in pipleline")
+
+        latent_shape = (1, num_latent_channels, Latent_h, Latent_w)
+
+        if input_image:
+
+            encoder = models["encoder"]
+            encoder.to(device)
+
+            input_image_tensor = input_image.resize((W,H))
+            input_image_tensor = np.array(input_image_tensor)
+
+            input_image_tensor = torch.tensor(input_image_tensor, dtype=torch.float32)
+            input_image_tensor = custom_rescale(input_image_tensor,(0, 255),(-1, 1)) #because the image has to be between -1 and 1
+            input_image_tensor = input_image_tensor.unsqueeze(0)
+            # (Batch size, Height, Width, Channel) --> (Batch_size, Channel, Height, Width)
+            input_image_tensor = input_image_tensor.permute (0,3,1,2)
+
+            encoder_noise = torch.randn(latent_shape, generator=generator)
+
+            latents = encoder(x=input_image_tensor, noise=encoder_noise)
+
+            sampler.set_strength(strength=strength)
+            latents = sampler.add_noise(latents, sampler.timesteps[0])
+            to_idle(encoder)
+        else:
+            latents = torch.randn(latent_shape, generator=generator, device=device) # here sampler is not needed
         
 
+
+def custom_rescale(input, prev_lim, new_lim):
+    
+    prev_lim_min, prev_lim_max = prev_lim
+    new_lim_min, new_lim_max = new_lim
+
+    norm_input = (new_lim_max-new_lim_min)*(input-prev_lim_min)/(prev_lim_max-prev_lim_min) + new_lim_min
+
+    if min(norm_input)!=-1:
+        raise ValueError("Check min value")
+    
+    if max(norm_input)!=1:
+        raise ValueError("Check max value")
+
+    return norm_input
 
         
 

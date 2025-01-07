@@ -117,15 +117,62 @@ def generate(prompt: str, neg_prompt: str, input_image=None, strength=0.9, do_cf
         diffusion = models["diffusion"]
         diffusion.to(device)
 
+        timesteps = tqdm(sampler.timesteps)
+
+        for i,timestep in enumerate(timesteps):
+
+            time_embedding = get_time_embedding(timestep).to(device)
+
+            # (Batch_size, 4, latent_H, latent_W)
+            model_input = latents
+        
+            if do_cfg:
+
+                # (2*Batch_size, 4, latent_H, latent_W)
+                model_input = model_input.repeat(2, 1, 1, 1)
+            
+            # (2*Batch_size, 4, latent_H, latent_W)
+            model_output = diffusion(model_input, context, time_embedding)
+
+            if do_cfg:
+                output_cond, output_uncond = model_output.chunk(2)
+                model_output = cfg_scale*(output_cond-output_uncond) + output_uncond
+            
+            latents = sampler.step(timestep, latents, model_output)
+        
+        to_idle(diffusion)
+
+        decoder = models['decoder']
+        decoder.to(device)
+
+        images = decoder(latents)
+        to_idle(decoder)
+
+        images = custom_rescale(images, (-1,1), (0,255), clamp=True)
+
+        images = images.permute(0, 2, 3, 1) #(batchsize, height, width, channel)
+        images = images.to("cpu", torch.uint8).numpy()
+        return images[0]
 
 
-def custom_rescale(input, prev_lim, new_lim):
+
+
+
+
+
+
+
+
+
+def custom_rescale(input, prev_lim, new_lim, clamp=False):
     
     prev_lim_min, prev_lim_max = prev_lim
     new_lim_min, new_lim_max = new_lim
 
     norm_input = (new_lim_max-new_lim_min)*(input-prev_lim_min)/(prev_lim_max-prev_lim_min) + new_lim_min
-
+    
+    if clamp:
+        norm_input = norm_input.clamp(new_lim_min, new_lim_max)
     if min(norm_input)!=-1:
         raise ValueError("Check min value")
     

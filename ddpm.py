@@ -78,3 +78,8 @@ class DDPM_Sampler:
         pred_prev_sample = pred_prev_sample + variance
 
         return pred_prev_sample
+    
+    def set_strength(self, strength=1):
+        start_step     = self.num_inference_steps - int(self.num_inference_steps * strength)
+        self.timesteps = self.timesteps[start_step:]
+        self.start_step = start_step

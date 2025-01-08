@@ -6,6 +6,7 @@ import torch
 import numpy as np
 import tqdm as tqdm
 from encoder import VAE_encoder
+from ddpm import DDPM_Sampler
 
 
 W = 512 #Height
@@ -190,7 +191,7 @@ def get_time_embedding(timestep, dim=160):
 
     embedding = torch.cat([torch.cos(embedding), torch.sin(embedding)])
 
-    shape (1, 2*dim)
+    #shape (1, 2*dim)
     return embedding.unsqueeze(0) 
 
              
